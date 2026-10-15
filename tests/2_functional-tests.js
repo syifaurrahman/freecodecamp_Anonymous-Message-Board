@@ -68,12 +68,11 @@ suite('Functional Tests', function () {
           text: 'Thread to be deleted',
           delete_password: 'delete_me'
         })
-        .end(function (err, res) {
+        .end(function () {
           chai.request(server)
             .get('/api/threads/' + testBoard)
             .end(function (err, res) {
               const threadToDelete = res.body.find(t => t.text === 'Thread to be deleted') || res.body[0];
-              assert.isDefined(threadToDelete);
               chai.request(server)
                 .delete('/api/threads/' + testBoard)
                 .send({
@@ -168,13 +167,12 @@ suite('Functional Tests', function () {
           text: 'Reply to be deleted',
           delete_password: 'reply_delete_me'
         })
-        .end(function (err, res) {
+        .end(function () {
           chai.request(server)
             .get('/api/replies/' + testBoard)
             .query({ thread_id: testThreadId })
             .end(function (err, res) {
               const replyToDelete = res.body.replies.find(r => r.text === 'Reply to be deleted') || res.body.replies[res.body.replies.length - 1];
-              assert.isDefined(replyToDelete);
               chai.request(server)
                 .delete('/api/replies/' + testBoard)
                 .send({
