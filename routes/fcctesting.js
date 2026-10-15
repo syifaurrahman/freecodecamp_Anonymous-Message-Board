@@ -58,21 +58,26 @@ module.exports = function (app) {
       });
     });
 
-  app.get('/_api/get-tests', cors(), function(req, res, next){
+  app.get(['/_api/get-tests', '//_api/get-tests'], cors(), function(req, res, next){
     console.log('requested');
-    if(process.env.NODE_ENV === 'test') return next();
-    res.json({status: 'unavailable'});
+    next();
   },
   function(req, res, next){
-    if(!runner.report) return next();
+    if(!runner.report) {
+      try { runner.run(); } catch(e) {}
+      return next();
+    }
     res.json(testFilter(runner.report, req.query.type, req.query.n));
   },
   function(req, res){
+    if(runner.report) {
+      return res.json(testFilter(runner.report, req.query.type, req.query.n));
+    }
     runner.on('done', function(report){
       process.nextTick(() =>  res.json(testFilter(runner.report, req.query.type, req.query.n)));
     });
   });
-  app.get('/_api/app-info', function(req, res) {
+  app.get(['/_api/app-info', '//_api/app-info'], function(req, res) {
     res.json({ headers: res.getHeaders()});
   });
   
