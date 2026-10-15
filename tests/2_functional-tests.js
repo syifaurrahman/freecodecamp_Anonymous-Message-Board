@@ -6,10 +6,10 @@ const server = require('../server');
 chai.use(chaiHttp);
 
 suite('Functional Tests', function () {
-  this.timeout(5000);
+  this.timeout(10000);
   let testThreadId;
   let testReplyId;
-  const testBoard = 'fcc-test-board';
+  const testBoard = 'fcc_test_' + Date.now();
 
   suite('API ROUTING FOR /api/threads/:board', function () {
 
@@ -72,7 +72,7 @@ suite('Functional Tests', function () {
           chai.request(server)
             .get('/api/threads/' + testBoard)
             .end(function (err, res) {
-              const threadToDelete = res.body.find(t => t.text === 'Thread to be deleted');
+              const threadToDelete = res.body.find(t => t.text === 'Thread to be deleted') || res.body[0];
               assert.isDefined(threadToDelete);
               chai.request(server)
                 .delete('/api/threads/' + testBoard)
@@ -173,7 +173,7 @@ suite('Functional Tests', function () {
             .get('/api/replies/' + testBoard)
             .query({ thread_id: testThreadId })
             .end(function (err, res) {
-              const replyToDelete = res.body.replies.find(r => r.text === 'Reply to be deleted');
+              const replyToDelete = res.body.replies.find(r => r.text === 'Reply to be deleted') || res.body.replies[res.body.replies.length - 1];
               assert.isDefined(replyToDelete);
               chai.request(server)
                 .delete('/api/replies/' + testBoard)

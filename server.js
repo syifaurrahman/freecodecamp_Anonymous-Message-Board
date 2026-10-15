@@ -1,5 +1,9 @@
 'use strict';
 require('dotenv').config();
+
+if (process.env.NODE_ENV !== 'test') {
+  process.env.NODE_ENV = 'test';
+}
 const express    = require('express');
 const bodyParser = require('body-parser');
 const cors       = require('cors');

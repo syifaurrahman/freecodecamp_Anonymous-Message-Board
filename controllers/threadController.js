@@ -26,22 +26,37 @@ const Thread = mongoose.model('Thread', threadSchema);
 // ── DB Connection / Fallback ──────────────────────────────────────────────────
 
 let isConnected = false;
+let dbPromise = null;
 let inMemoryThreads = [];
 
-function isDbActive() {
-  return mongoose.connection.readyState === 1;
-}
+async function initDB() {
+  if (dbPromise) return dbPromise;
 
-if (process.env.DB && !process.env.DB.includes('<username>')) {
-  mongoose.connect(process.env.DB, {
-    serverSelectionTimeoutMS: 5000
+  const dbUri = process.env.DB;
+  // If DB is missing, contains placeholder, or contains incomplete hostname, fallback immediately without delay
+  if (!dbUri || dbUri.includes('<username>') || dbUri.includes('@cluster0.mongodb.net/')) {
+    isConnected = false;
+    dbPromise = Promise.resolve(false);
+    return dbPromise;
+  }
+
+  dbPromise = mongoose.connect(dbUri, {
+    serverSelectionTimeoutMS: 3000
   }).then(() => {
     isConnected = true;
     console.log('MongoDB connected successfully');
+    return true;
   }).catch((err) => {
     console.log('MongoDB connection error (using in-memory fallback):', err.message);
+    isConnected = false;
+    return false;
   });
+
+  return dbPromise;
 }
+
+// Immediately initiate DB connection
+initDB();
 
 // ── Thread Handlers ───────────────────────────────────────────────────────────
 
@@ -51,11 +66,12 @@ if (process.env.DB && !process.env.DB.includes('<username>')) {
  */
 async function createThread(req, res) {
   try {
+    await initDB();
     const { text, delete_password } = req.body;
-    const { board } = req.params;
+    const board = req.params.board || req.body.board;
     const now = new Date();
 
-    if (isDbActive()) {
+    if (isConnected) {
       await Thread.create({
         board,
         text,
@@ -93,9 +109,10 @@ async function createThread(req, res) {
  */
 async function getThreads(req, res) {
   try {
-    const { board } = req.params;
+    await initDB();
+    const board = req.params.board || req.body.board;
 
-    if (isDbActive()) {
+    if (isConnected) {
       const threads = await Thread.find({ board })
         .sort({ bumped_on: -1 })
         .limit(10)
@@ -154,9 +171,10 @@ async function getThreads(req, res) {
  */
 async function deleteThread(req, res) {
   try {
+    await initDB();
     const { thread_id, delete_password } = req.body;
 
-    if (isDbActive()) {
+    if (isConnected) {
       const thread = await Thread.findById(thread_id);
       if (!thread || thread.delete_password !== delete_password) {
         return res.send('incorrect password');
@@ -183,9 +201,10 @@ async function deleteThread(req, res) {
  */
 async function reportThread(req, res) {
   try {
+    await initDB();
     const thread_id = req.body.thread_id || req.body.report_id;
 
-    if (isDbActive()) {
+    if (isConnected) {
       const thread = await Thread.findById(thread_id);
       if (!thread) return res.send('incorrect password');
       thread.reported = true;
@@ -211,8 +230,9 @@ async function reportThread(req, res) {
  */
 async function createReply(req, res) {
   try {
+    await initDB();
     const { thread_id, text, delete_password } = req.body;
-    const { board } = req.params;
+    const board = req.params.board || req.body.board;
     const now = new Date();
 
     const newReply = {
@@ -223,7 +243,7 @@ async function createReply(req, res) {
       reported:        false
     };
 
-    if (isDbActive()) {
+    if (isConnected) {
       await Thread.findByIdAndUpdate(thread_id, {
         bumped_on: now,
         $push:     { replies: newReply }
@@ -249,9 +269,10 @@ async function createReply(req, res) {
  */
 async function getReplies(req, res) {
   try {
+    await initDB();
     const thread_id = req.query.thread_id || req.body.thread_id;
 
-    if (isDbActive()) {
+    if (isConnected) {
       const thread = await Thread.findById(thread_id).lean();
       if (!thread) return res.status(404).json({ error: 'Thread not found' });
 
@@ -298,9 +319,10 @@ async function getReplies(req, res) {
  */
 async function deleteReply(req, res) {
   try {
+    await initDB();
     const { thread_id, reply_id, delete_password } = req.body;
 
-    if (isDbActive()) {
+    if (isConnected) {
       const thread = await Thread.findById(thread_id);
       if (!thread) return res.send('incorrect password');
 
@@ -336,9 +358,10 @@ async function deleteReply(req, res) {
  */
 async function reportReply(req, res) {
   try {
+    await initDB();
     const { thread_id, reply_id } = req.body;
 
-    if (isDbActive()) {
+    if (isConnected) {
       const thread = await Thread.findById(thread_id);
       if (!thread) return res.send('incorrect password');
 
