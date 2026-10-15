@@ -59,7 +59,7 @@ module.exports = function (app) {
     });
 
   app.get(['/_api/get-tests', '//_api/get-tests'], cors(), function(req, res) {
-    if (runner.report) {
+    if (runner.report && runner.report.length > 0) {
       return res.json(testFilter(runner.report, req.query.type, req.query.n));
     }
     const onDone = function(report) {
@@ -69,12 +69,16 @@ module.exports = function (app) {
     };
     runner.once('done', onDone);
 
+    try {
+      runner.run();
+    } catch (e) {}
+
     setTimeout(() => {
       runner.removeListener('done', onDone);
       if (!res.headersSent) {
         res.json(testFilter(runner.report || [], req.query.type, req.query.n));
       }
-    }, 4000);
+    }, 20000);
   });
   app.get(['/_api/app-info', '//_api/app-info'], function(req, res) {
     res.json({ headers: res.getHeaders()});

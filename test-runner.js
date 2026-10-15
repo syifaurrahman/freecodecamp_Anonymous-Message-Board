@@ -47,8 +47,11 @@ fs.readdirSync(testDir).filter(function(file){
     );
 });
 
+var isRunning = false;
 var emitter = new EventEmitter();  
 emitter.run = function() {
+  if (isRunning) return;
+  isRunning = true;
 
   var tests = [];
   var context = "";
@@ -71,6 +74,7 @@ emitter.run = function() {
         tests.push(obj);
     })
     .on('end', function() {
+        isRunning = false;
         emitter.report = tests;
         emitter.emit('done', tests)
     })
@@ -82,6 +86,7 @@ emitter.run = function() {
       context = context.slice(0, -(s.title.length + separator.length))
     })
   } catch(e) {
+    isRunning = false;
     throw(e);
   }
 };
