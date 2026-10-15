@@ -58,24 +58,23 @@ module.exports = function (app) {
       });
     });
 
-  app.get(['/_api/get-tests', '//_api/get-tests'], cors(), function(req, res, next){
-    console.log('requested');
-    next();
-  },
-  function(req, res, next){
-    if(!runner.report) {
-      try { runner.run(); } catch(e) {}
-      return next();
-    }
-    res.json(testFilter(runner.report, req.query.type, req.query.n));
-  },
-  function(req, res){
-    if(runner.report) {
+  app.get(['/_api/get-tests', '//_api/get-tests'], cors(), function(req, res) {
+    if (runner.report) {
       return res.json(testFilter(runner.report, req.query.type, req.query.n));
     }
-    runner.on('done', function(report){
-      process.nextTick(() =>  res.json(testFilter(runner.report, req.query.type, req.query.n)));
-    });
+    const onDone = function(report) {
+      if (!res.headersSent) {
+        res.json(testFilter(report || runner.report || [], req.query.type, req.query.n));
+      }
+    };
+    runner.once('done', onDone);
+
+    setTimeout(() => {
+      runner.removeListener('done', onDone);
+      if (!res.headersSent) {
+        res.json(testFilter(runner.report || [], req.query.type, req.query.n));
+      }
+    }, 4000);
   });
   app.get(['/_api/app-info', '//_api/app-info'], function(req, res) {
     res.json({ headers: res.getHeaders()});

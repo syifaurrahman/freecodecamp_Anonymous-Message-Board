@@ -23,6 +23,8 @@ const threadSchema = new mongoose.Schema({
 
 const Thread = mongoose.model('Thread', threadSchema);
 
+mongoose.set('bufferCommands', false);
+
 // ── DB Connection / Fallback ──────────────────────────────────────────────────
 
 let isConnected = false;
@@ -34,7 +36,7 @@ async function initDB() {
 
   const dbUri = process.env.DB;
   // If DB is missing, contains placeholder, or contains incomplete hostname, fallback immediately without delay
-  if (!dbUri || dbUri.includes('<username>') || dbUri.includes('@cluster0.mongodb.net/')) {
+  if (!dbUri || dbUri.includes('<username>') || dbUri.includes('<password>') || /@cluster0\.mongodb\.net(\/|\?|$)/.test(dbUri)) {
     isConnected = false;
     dbPromise = Promise.resolve(false);
     return dbPromise;
