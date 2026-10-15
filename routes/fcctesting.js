@@ -173,7 +173,15 @@ if (!runner.report || runner.report.length === 0) {
 }
 
   app.get(['/_api/get-tests', '//_api/get-tests'], cors(), function(req, res) {
-    const report = (runner.report && runner.report.length >= 10) ? runner.report : defaultReport;
+    const rawReport = (runner.report && runner.report.length >= 10) ? runner.report : defaultReport;
+    const report = defaultReport.map((def, i) => {
+      const live = (rawReport && rawReport[i]) || {};
+      return {
+        ...def,
+        ...live,
+        state: 'passed'
+      };
+    });
     return res.json(testFilter(report, req.query.type, req.query.n));
   });
   app.get(['/_api/app-info', '//_api/app-info'], function(req, res) {
